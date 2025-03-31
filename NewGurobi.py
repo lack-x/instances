@@ -5,7 +5,7 @@ import openpyxl
 
 
 def ReadData(floderName, txtName):
-    '''先读取共有数据'''
+    '''read the common data'''
     fileName = "D:\\Instance\\" + floderName + "\\SamePara.txt"
 
     with open(fileName) as f:
@@ -20,7 +20,7 @@ def ReadData(floderName, txtName):
             if i == 7:
                 jobReadyTime = list(map(lambda x: int(x), readLine[i].strip("\n").split()))
 
-    #读不同场景下的数据
+    #read data from different scenarios
     scenarioName = "D:\\Instance\\" + floderName + "\\" + str(txtName) + ".txt"
     jobProcessTime = []
     with open(scenarioName) as s:
@@ -37,31 +37,31 @@ def ReadData(floderName, txtName):
     return jobNum, machineNum, batchNum, capacity, jobInfo
 
 
-# 先读取数据
+# read data
 path = "D:\\2"
 dirs = os.listdir(path)
 for folderName in dirs:
     wb = openpyxl.Workbook()
     ws = wb.active
-    ws.append(['场景编号', 'GurobiResult', 'Gap(%)'])
+    ws.append(['scenario index', 'GurobiResult', 'Gap(%)'])
 
     for txtName in range(20):
         jobNum, machineNum, batchNum, capacity, jobInfo = ReadData(folderName, txtName)
         jobIndex, jobSize, jobReadyTime, jobProcessTime = multidict(jobInfo)
         print(jobReadyTime)
 
-        #开始建立模型
+        # set up model
         m = Model("MILP model")
         x = m.addVars(range(0, jobNum), range(0, batchNum), range(0, machineNum), vtype=GRB.BINARY, name="x")
         S = m.addVars(range(0, batchNum), range(0, machineNum), name = "S")
         P = m.addVars(range(0, batchNum), range(0, machineNum), name = "P")
         C_max = m.addVar(name = "C_max")
 
-        # 更新环境变量
+        
         m.update()
-        # 创建目标函数
+        # add objective
         m.setObjective(C_max, sense=GRB.MINIMIZE)
-        # 添加约束条件
+        # add constraints
         m.addConstrs(quicksum(x[j, b, m] for b in range(0, batchNum) for m in range(0, machineNum)) == 1
                      for j in range(0, jobNum))
 
@@ -88,7 +88,7 @@ for folderName in dirs:
             f.write("RunTime is " + str(m.Runtime) + "\n")
             f.write("BestObj is " + str(m.objval) + "\n")
             f.write('gap=:' + str(m.mipgap) + "\n")
-            f.write("-----------------最优解--------------------\n")
+            f.write("-----------------optimal solution--------------------\n")
             for v in m.getVars():
                 if v.x > 0:
                     f.write(str(v.varName) + "\t" + str(v.x) + "\n")
@@ -100,7 +100,7 @@ for folderName in dirs:
             f.write("RunTime is " + str(m.Runtime) + "\n")
             f.write("BestObj is " + str(m.objval) + "\n")
             f.write('gap=:' + str(m.mipgap) + "\n")
-            f.write("-----------------可行解--------------------\n")
+            f.write("-----------------feasible solution--------------------\n")
             for v in m.getVars():
                 if v.x > 0:
                     f.write(str(v.varName) + "\t" + str(v.x) + "\n")
